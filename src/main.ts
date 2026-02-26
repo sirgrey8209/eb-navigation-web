@@ -1,24 +1,41 @@
 // EB Navigation Web - Main Entry Point
+import { Scene } from './core/Scene';
 
 console.log('EB Navigation Web - Starting...');
 
-// App initialization will be added here
 class App {
+  private scene: Scene | null = null;
+  private animationId: number = 0;
+
   constructor() {
     console.log('App initialized');
     this.init();
   }
 
   private init(): void {
-    // Placeholder - Three.js scene will be initialized here
     const viewport = document.getElementById('viewport');
-    if (viewport) {
-      viewport.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;">3D Viewport (Three.js will be initialized here)</div>';
+    if (!viewport) {
+      console.error('Viewport element not found');
+      return;
     }
 
-    // Update slider values display
+    // Initialize Three.js Scene
+    this.scene = new Scene(viewport);
+
+    // Start render loop
+    this.animate();
+
+    // Setup UI
     this.setupSliders();
   }
+
+  private animate = (): void => {
+    this.animationId = requestAnimationFrame(this.animate);
+
+    if (this.scene) {
+      this.scene.render();
+    }
+  };
 
   private setupSliders(): void {
     const spawnRate = document.getElementById('spawn-rate') as HTMLInputElement;
