@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>EB Navigation Web</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header id="header">
+      <div class="logo">EB Navigation Web</div>
+      <div class="header-actions">
+        <button id="btn-settings" title="Settings">&#9881;</button>
+        <button id="btn-fullscreen" title="Fullscreen">&#9974;</button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main">
+      <!-- 3D Viewport -->
+      <div id="viewport"></div>
+
+      <!-- Bottom Panels -->
+      <div id="panels">
+        <!-- Object Panel -->
+        <div id="object-panel" class="panel">
+          <h3>Objects</h3>
+          <div class="object-buttons">
+            <button id="btn-cube" class="object-btn">Cube</button>
+            <button id="btn-ramp" class="object-btn">Ramp</button>
+            <button id="btn-cylinder" class="object-btn">Cylinder</button>
+          </div>
+          <div id="selected-info" class="selected-info">
+            <p>Selected: None</p>
+          </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div id="control-panel" class="panel">
+          <h3>Controls</h3>
+          <div class="control-buttons">
+            <button id="btn-build">Build NavMesh</button>
+            <button id="btn-start">Start</button>
+            <button id="btn-stop" disabled>Stop</button>
+            <button id="btn-reset">Reset</button>
+          </div>
+          <div class="sliders">
+            <div class="slider-group">
+              <label>Spawn Rate: <span id="spawn-rate-value">10</span>/s</label>
+              <input type="range" id="spawn-rate" min="1" max="50" value="10">
+            </div>
+            <div class="slider-group">
+              <label>Spawn Distance: <span id="spawn-dist-value">30</span>m</label>
+              <input type="range" id="spawn-dist" min="10" max="50" value="30">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Performance Panel -->
+      <div id="performance-panel" class="panel">
+        <span>FPS: <span id="fps">0</span></span>
+        <span>Agents: <span id="agent-count">0</span></span>
+        <span>Frame: <span id="frame-time">0</span>ms</span>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
