@@ -2,7 +2,9 @@
 import { Scene } from './core/Scene';
 import { CameraController } from './core/CameraController';
 import { Ground } from './objects/Ground';
+import { ObjectManager } from './objects/ObjectManager';
 import { Profiler } from './utils/Profiler';
+import { PlacedObject } from './types';
 
 console.log('EB Navigation Web - Starting...');
 
@@ -10,8 +12,9 @@ class App {
   private scene: Scene | null = null;
   private cameraController: CameraController | null = null;
   private ground: Ground | null = null;
+  private objectManager: ObjectManager | null = null;
   private profiler: Profiler | null = null;
-  private animationId: number = 0;
+  private _animationId: number = 0;
 
   constructor() {
     console.log('App initialized');
@@ -44,6 +47,18 @@ class App {
     this.ground = new Ground(100, 10);
     this.ground.addToScene(this.scene.scene);
 
+    // Initialize Object Manager
+    this.objectManager = new ObjectManager(
+      this.scene.scene,
+      this.scene.camera,
+      viewport,
+      {
+        onSelect: this.onObjectSelect.bind(this),
+        onPlace: this.onObjectPlace.bind(this),
+        onDelete: this.onObjectDelete.bind(this),
+      }
+    );
+
     // Initialize Profiler
     this.profiler = new Profiler();
 
@@ -51,11 +66,11 @@ class App {
     this.animate();
 
     // Setup UI
-    this.setupSliders();
+    this.setupUI();
   }
 
   private animate = (): void => {
-    this.animationId = requestAnimationFrame(this.animate);
+    this._animationId = requestAnimationFrame(this.animate);
 
     if (this.profiler) {
       this.profiler.beginFrame();
@@ -74,6 +89,59 @@ class App {
     }
   };
 
+  private setupUI(): void {
+    // Object buttons
+    document.getElementById('btn-cube')?.addEventListener('click', () => {
+      this.objectManager?.startPlacement('cube');
+      this.setActiveButton('btn-cube');
+    });
+
+    document.getElementById('btn-ramp')?.addEventListener('click', () => {
+      this.objectManager?.startPlacement('ramp');
+      this.setActiveButton('btn-ramp');
+    });
+
+    document.getElementById('btn-cylinder')?.addEventListener('click', () => {
+      this.objectManager?.startPlacement('cylinder');
+      this.setActiveButton('btn-cylinder');
+    });
+
+    // Sliders
+    this.setupSliders();
+  }
+
+  private setActiveButton(activeId: string): void {
+    ['btn-cube', 'btn-ramp', 'btn-cylinder'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.classList.toggle('active', id === activeId);
+      }
+    });
+  }
+
+  private onObjectSelect(object: PlacedObject | null): void {
+    const info = document.getElementById('selected-info');
+    if (info) {
+      if (object) {
+        info.innerHTML = `
+          <p>Selected: ${object.id}</p>
+          <p>Type: ${object.type}</p>
+          <p>Position: (${object.position.x.toFixed(1)}, ${object.position.z.toFixed(1)})</p>
+        `;
+      } else {
+        info.innerHTML = '<p>Selected: None</p>';
+      }
+    }
+  }
+
+  private onObjectPlace(object: PlacedObject): void {
+    console.log('Object placed:', object.id);
+  }
+
+  private onObjectDelete(id: string): void {
+    console.log('Object deleted:', id);
+  }
+
   private setupSliders(): void {
     const spawnRate = document.getElementById('spawn-rate') as HTMLInputElement;
     const spawnRateValue = document.getElementById('spawn-rate-value');
@@ -91,6 +159,15 @@ class App {
         spawnDistValue.textContent = spawnDist.value;
       });
     }
+  }
+
+  public dispose(): void {
+    if (this._animationId) {
+      cancelAnimationFrame(this._animationId);
+    }
+    this.objectManager?.dispose();
+    this.cameraController?.dispose();
+    this.scene?.dispose();
   }
 }
 
