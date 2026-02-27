@@ -23,7 +23,7 @@
 | Phase 1 | 기본 구조 | ✅ 완료 |
 | Phase 2 | 오브젝트 시스템 | ✅ 완료 |
 | Phase 3 | NavMesh | ✅ 완료 |
-| Phase 4 | 군중 시뮬레이션 | ⏳ 대기 |
+| Phase 4 | 군중 시뮬레이션 | ✅ 완료 |
 | Phase 5 | 최적화 & 완성 | ⏳ 대기 |
 
 ---
@@ -1171,29 +1171,31 @@ git commit -m "feat: integrate NavMesh with Build button"
 
 ---
 
-## Phase 4: 군중 시뮬레이션
+## Phase 4: 군중 시뮬레이션 ✅ 완료
 
-### Task 13: Player 구현
+### 완료된 Task 목록
 
-**Files:**
-- Create: `src/entities/Player.ts`
+| Task | 설명 | 상태 | 커밋 |
+|------|------|------|------|
+| Task 13 | Player 구현 (WASD/화살표 이동) | ✅ | - |
+| Task 14 | CrowdManager 시스템 | ✅ | - |
+| Task 15 | GPU Instancing AgentRenderer | ✅ | - |
 
-플레이어 이동 (WASD/화살표), 모바일 조이스틱
+### 구현된 파일
 
-### Task 14: Monster & Crowd 시스템
+- `src/entities/Player.ts` - 플레이어 이동 (WASD/화살표)
+- `src/navigation/CrowdManager.ts` - recast-navigation Crowd 시뮬레이션
+- `src/entities/AgentRenderer.ts` - GPU Instancing 기반 대량 에이전트 렌더링
 
-**Files:**
-- Create: `src/entities/Monster.ts`
-- Create: `src/navigation/CrowdManager.ts`
+### 기능
 
-몬스터 스폰, Crowd 시뮬레이션 연동
-
-### Task 15: GPU Instancing 렌더러
-
-**Files:**
-- Create: `src/entities/AgentRenderer.ts`
-
-대량 에이전트 렌더링 최적화
+- WASD/화살표 키로 플레이어 이동
+- Start 버튼으로 시뮬레이션 시작 (NavMesh 빌드 필요)
+- 에이전트가 자동으로 스폰되어 플레이어를 추적
+- Spawn Rate 슬라이더로 초당 스폰 수 조절
+- Spawn Distance 슬라이더로 스폰 거리 조절
+- GPU Instancing으로 최대 500 에이전트 효율적 렌더링
+- Reset 버튼으로 모든 에이전트 제거 및 플레이어 위치 초기화
 
 ---
 
@@ -1237,3 +1239,4 @@ npm run preview
 | 2025-02-27 | 0.1 | 초안 작성 |
 | 2025-02-27 | 0.2 | Phase 1 완료, Phase 2-5 계획 추가 |
 | 2026-02-27 | 0.3 | Phase 3 완료 (NavMesh) |
+| 2026-02-27 | 0.4 | Phase 4 완료 (군중 시뮬레이션) |
