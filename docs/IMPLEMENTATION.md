@@ -22,7 +22,7 @@
 |-------|------|------|
 | Phase 1 | 기본 구조 | ✅ 완료 |
 | Phase 2 | 오브젝트 시스템 | ✅ 완료 |
-| Phase 3 | NavMesh | ⏳ 대기 |
+| Phase 3 | NavMesh | ✅ 완료 |
 | Phase 4 | 군중 시뮬레이션 | ⏳ 대기 |
 | Phase 5 | 최적화 & 완성 | ⏳ 대기 |
 
@@ -852,9 +852,31 @@ git commit -m "feat: add transform handles for resizing objects"
 
 ---
 
-## Phase 3: NavMesh
+## Phase 3: NavMesh ✅ 완료
 
-### Task 10: recast-navigation-js 설치 및 초기화
+### 완료된 Task 목록
+
+| Task | 설명 | 상태 | 커밋 |
+|------|------|------|------|
+| Task 10 | recast-navigation-js 설치 및 NavMeshBuilder | ✅ | `6eacb8b` |
+| Task 11 | NavMesh 시각화 (NavMeshVisualizer) | ✅ | `6eacb8b` |
+| Task 12 | NavMesh UI 통합 | ✅ | `6eacb8b` |
+
+### 구현된 파일
+
+- `src/navigation/NavMeshBuilder.ts` - NavMesh 생성 및 경로 탐색
+- `src/navigation/NavMeshVisualizer.ts` - NavMesh 시각화
+
+### 기능
+
+- Build NavMesh 버튼으로 NavMesh 생성
+- 반투명 초록색 표면 + 노란색 엣지 라인으로 시각화
+- 오브젝트 배치/삭제 시 NavMesh 자동 클리어 (재빌드 필요)
+- `findPath()` 메서드로 경로 탐색 가능
+
+---
+
+### Task 10: recast-navigation-js 설치 및 초기화 (상세)
 
 **Files:**
 - Modify: `package.json`
@@ -1214,3 +1236,4 @@ npm run preview
 |------|------|------|
 | 2025-02-27 | 0.1 | 초안 작성 |
 | 2025-02-27 | 0.2 | Phase 1 완료, Phase 2-5 계획 추가 |
+| 2026-02-27 | 0.3 | Phase 3 완료 (NavMesh) |
