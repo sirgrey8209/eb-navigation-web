@@ -1,10 +1,12 @@
 // EB Navigation Web - Main Entry Point
 import { Scene } from './core/Scene';
+import { Ground } from './objects/Ground';
 
 console.log('EB Navigation Web - Starting...');
 
 class App {
   private scene: Scene | null = null;
+  private ground: Ground | null = null;
   private animationId: number = 0;
 
   constructor() {
@@ -21,6 +23,10 @@ class App {
 
     // Initialize Three.js Scene
     this.scene = new Scene(viewport);
+
+    // Add ground
+    this.ground = new Ground(100, 10);
+    this.ground.addToScene(this.scene.scene);
 
     // Start render loop
     this.animate();
