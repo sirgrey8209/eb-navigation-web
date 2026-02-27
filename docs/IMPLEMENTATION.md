@@ -21,7 +21,7 @@
 | Phase | 설명 | 상태 |
 |-------|------|------|
 | Phase 1 | 기본 구조 | ✅ 완료 |
-| Phase 2 | 오브젝트 시스템 | ⏳ 대기 |
+| Phase 2 | 오브젝트 시스템 | ✅ 완료 |
 | Phase 3 | NavMesh | ⏳ 대기 |
 | Phase 4 | 군중 시뮬레이션 | ⏳ 대기 |
 | Phase 5 | 최적화 & 완성 | ⏳ 대기 |
@@ -74,9 +74,33 @@ npm run dev
 
 ---
 
-## Phase 2: 오브젝트 시스템
+## Phase 2: 오브젝트 시스템 ✅ 완료
 
-### Task 7: ObjectManager 기본 구조
+### 완료된 Task 목록
+
+| Task | 설명 | 상태 | 커밋 |
+|------|------|------|------|
+| Task 7 | ObjectManager 기본 구조 | ✅ | `867a7bf` |
+| Task 8 | main.ts에 ObjectManager 통합 | ✅ | `867a7bf` |
+| Task 9 | TransformHandles 크기 조절 핸들 | ✅ | `867a7bf` |
+
+### 구현된 파일
+
+- `src/types/index.ts` - 타입 정의 (ObjectType, PlacedObject, ObjectManagerEvents)
+- `src/objects/ObjectManager.ts` - 오브젝트 배치/선택/삭제 관리
+- `src/objects/TransformHandles.ts` - 크기 조절 핸들 (추후 통합 예정)
+
+### 기능
+
+- Cube, Ramp, Cylinder 버튼으로 배치 모드 진입
+- 지면 클릭 시 오브젝트 배치
+- 오브젝트 클릭 시 선택 (하이라이트)
+- Delete 키로 선택된 오브젝트 삭제
+- ESC 키로 배치 모드 취소
+
+---
+
+### Task 7: ObjectManager 기본 구조 (상세)
 
 **Files:**
 - Create: `src/objects/ObjectManager.ts`
