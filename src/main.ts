@@ -2,6 +2,7 @@
 import { Scene } from './core/Scene';
 import { CameraController } from './core/CameraController';
 import { Ground } from './objects/Ground';
+import { Profiler } from './utils/Profiler';
 
 console.log('EB Navigation Web - Starting...');
 
@@ -9,6 +10,7 @@ class App {
   private scene: Scene | null = null;
   private cameraController: CameraController | null = null;
   private ground: Ground | null = null;
+  private profiler: Profiler | null = null;
   private animationId: number = 0;
 
   constructor() {
@@ -42,6 +44,9 @@ class App {
     this.ground = new Ground(100, 10);
     this.ground.addToScene(this.scene.scene);
 
+    // Initialize Profiler
+    this.profiler = new Profiler();
+
     // Start render loop
     this.animate();
 
@@ -52,12 +57,20 @@ class App {
   private animate = (): void => {
     this.animationId = requestAnimationFrame(this.animate);
 
+    if (this.profiler) {
+      this.profiler.beginFrame();
+    }
+
     if (this.cameraController) {
       this.cameraController.update();
     }
 
     if (this.scene) {
       this.scene.render();
+    }
+
+    if (this.profiler) {
+      this.profiler.endFrame();
     }
   };
 
