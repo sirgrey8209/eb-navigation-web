@@ -16,6 +16,11 @@ export class ObjectManager {
   private events: ObjectManagerEvents;
   private objectIdCounter: number = 0;
 
+  // Drag placement state
+  private isDragging: boolean = false;
+  private dragStartPos: THREE.Vector2 = new THREE.Vector2();
+  private onCancelPlacementCallback: (() => void) | null = null;
+
   constructor(
     scene: THREE.Scene,
     camera: THREE.Camera,
@@ -33,24 +38,34 @@ export class ObjectManager {
   }
 
   private setupEventListeners(): void {
-    this.domElement.addEventListener('click', this.onClick);
+    this.domElement.addEventListener('mousedown', this.onMouseDown);
+    this.domElement.addEventListener('mouseup', this.onMouseUp);
     this.domElement.addEventListener('mousemove', this.onMouseMove);
+    this.domElement.addEventListener('contextmenu', this.onContextMenu);
     window.addEventListener('keydown', this.onKeyDown);
   }
 
-  public startPlacement(type: ObjectType): void {
+  public startPlacement(type: ObjectType, onCancel?: () => void): void {
     this.placementMode = type;
+    this.onCancelPlacementCallback = onCancel || null;
     this.clearSelection();
     this.createPreviewMesh(type);
   }
 
   public cancelPlacement(): void {
-    this.placementMode = null;
-    if (this.previewMesh) {
-      this.scene.remove(this.previewMesh);
-      this.previewMesh.geometry.dispose();
-      (this.previewMesh.material as THREE.Material).dispose();
-      this.previewMesh = null;
+    if (this.placementMode) {
+      this.placementMode = null;
+      if (this.previewMesh) {
+        this.scene.remove(this.previewMesh);
+        this.previewMesh.geometry.dispose();
+        (this.previewMesh.material as THREE.Material).dispose();
+        this.previewMesh = null;
+      }
+      // Notify callback (to reset button state)
+      if (this.onCancelPlacementCallback) {
+        this.onCancelPlacementCallback();
+        this.onCancelPlacementCallback = null;
+      }
     }
   }
 
@@ -124,22 +139,66 @@ export class ObjectManager {
     return geometry;
   }
 
-  private onClick = (event: MouseEvent): void => {
+  private onMouseDown = (event: MouseEvent): void => {
+    // Only handle left click
+    if (event.button !== 0) return;
+
     // Ignore if clicking on UI elements
     if ((event.target as HTMLElement).closest('#panels, #header, #performance-panel')) {
       return;
     }
 
+    this.dragStartPos.set(event.clientX, event.clientY);
+    this.isDragging = false;
+  };
+
+  private onMouseUp = (event: MouseEvent): void => {
+    // Only handle left click
+    if (event.button !== 0) return;
+
+    // Ignore if clicking on UI elements
+    if ((event.target as HTMLElement).closest('#panels, #header, #performance-panel')) {
+      return;
+    }
+
+    // Check if it was a drag (moved more than 5px)
+    const dx = event.clientX - this.dragStartPos.x;
+    const dy = event.clientY - this.dragStartPos.y;
+    const wasDrag = Math.sqrt(dx * dx + dy * dy) > 5;
+
     this.updateMouse(event);
 
     if (this.placementMode && this.previewMesh) {
+      // In placement mode: place on click OR drag release
       this.placeObject();
-    } else {
+    } else if (!wasDrag) {
+      // Not in placement mode: select only on click (not drag)
       this.trySelect();
+    }
+
+    this.isDragging = false;
+  };
+
+  private onContextMenu = (event: MouseEvent): void => {
+    // Prevent default context menu
+    event.preventDefault();
+
+    // Cancel placement mode on right-click
+    if (this.placementMode) {
+      this.cancelPlacement();
     }
   };
 
   private onMouseMove = (event: MouseEvent): void => {
+    // Track dragging
+    if (event.buttons === 1) {
+      const dx = event.clientX - this.dragStartPos.x;
+      const dy = event.clientY - this.dragStartPos.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 5) {
+        this.isDragging = true;
+      }
+    }
+
     this.updateMouse(event);
 
     if (this.placementMode && this.previewMesh) {
@@ -270,8 +329,10 @@ export class ObjectManager {
   }
 
   public dispose(): void {
-    this.domElement.removeEventListener('click', this.onClick);
+    this.domElement.removeEventListener('mousedown', this.onMouseDown);
+    this.domElement.removeEventListener('mouseup', this.onMouseUp);
     this.domElement.removeEventListener('mousemove', this.onMouseMove);
+    this.domElement.removeEventListener('contextmenu', this.onContextMenu);
     window.removeEventListener('keydown', this.onKeyDown);
 
     // Clean up preview mesh

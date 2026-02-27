@@ -8,6 +8,7 @@ import { NavMeshVisualizer } from './navigation/NavMeshVisualizer';
 import { CrowdManager } from './navigation/CrowdManager';
 import { Player } from './entities/Player';
 import { AgentRenderer } from './entities/AgentRenderer';
+import { VirtualJoystick } from './ui/VirtualJoystick';
 import { Profiler } from './utils/Profiler';
 import { PlacedObject } from './types';
 
@@ -23,6 +24,7 @@ class App {
   private crowdManager: CrowdManager | null = null;
   private player: Player | null = null;
   private agentRenderer: AgentRenderer | null = null;
+  private virtualJoystick: VirtualJoystick | null = null;
   private profiler: Profiler | null = null;
   private _animationId: number = 0;
 
@@ -110,6 +112,15 @@ class App {
     });
     this.agentRenderer.initialize(this.scene.scene);
 
+    // Initialize Virtual Joystick for mobile
+    this.virtualJoystick = new VirtualJoystick(document.body, {
+      size: 120,
+      innerSize: 50,
+      maxDistance: 40,
+      position: 'left',
+      opacity: 0.6,
+    });
+
     // Initialize Profiler
     this.profiler = new Profiler();
 
@@ -139,20 +150,27 @@ class App {
       this.cameraController.update();
     }
 
-    // Update player
+    // Update player with joystick input
     if (this.player) {
+      if (this.virtualJoystick) {
+        this.player.setJoystickInput(this.virtualJoystick.getInput());
+      }
       this.player.update(deltaTime);
     }
 
-    // Update simulation
+    // Update simulation with profiling
     if (this.isSimulationRunning) {
+      if (this.profiler) this.profiler.beginCrowd();
       this.updateSimulation(deltaTime);
+      if (this.profiler) this.profiler.endCrowd();
     }
 
-    // Render
+    // Render with profiling
+    if (this.profiler) this.profiler.beginRender();
     if (this.scene) {
       this.scene.render();
     }
+    if (this.profiler) this.profiler.endRender();
 
     if (this.profiler) {
       this.profiler.endFrame();
@@ -180,6 +198,10 @@ class App {
 
     // Update crowd simulation
     this.crowdManager.update(deltaTime);
+
+    // Remove agents that reached the player
+    const catchRadius = this.player.getRadius() + 1.0; // Player radius + agent radius + small buffer
+    this.crowdManager.removeAgentsNearTarget(playerPos, catchRadius);
 
     // Update agent rendering
     const agents = this.crowdManager.getAgents();
@@ -225,20 +247,26 @@ class App {
     }
   }
 
+  private clearObjectButtons(): void {
+    ['btn-cube', 'btn-ramp', 'btn-cylinder'].forEach(id => {
+      document.getElementById(id)?.classList.remove('active');
+    });
+  }
+
   private setupUI(): void {
-    // Object buttons
+    // Object buttons with cancel callback
     document.getElementById('btn-cube')?.addEventListener('click', () => {
-      this.objectManager?.startPlacement('cube');
+      this.objectManager?.startPlacement('cube', () => this.clearObjectButtons());
       this.setActiveButton('btn-cube');
     });
 
     document.getElementById('btn-ramp')?.addEventListener('click', () => {
-      this.objectManager?.startPlacement('ramp');
+      this.objectManager?.startPlacement('ramp', () => this.clearObjectButtons());
       this.setActiveButton('btn-ramp');
     });
 
     document.getElementById('btn-cylinder')?.addEventListener('click', () => {
-      this.objectManager?.startPlacement('cylinder');
+      this.objectManager?.startPlacement('cylinder', () => this.clearObjectButtons());
       this.setActiveButton('btn-cylinder');
     });
 
@@ -262,6 +290,39 @@ class App {
 
     // Sliders
     this.setupSliders();
+
+    // Quality buttons
+    this.setupQualityButtons();
+  }
+
+  private setupQualityButtons(): void {
+    const qualityButtons = ['quality-low', 'quality-medium', 'quality-high'];
+    const qualityLevels = ['low', 'medium', 'high'] as const;
+
+    qualityButtons.forEach((btnId, index) => {
+      document.getElementById(btnId)?.addEventListener('click', () => {
+        // Update button states
+        qualityButtons.forEach(id => {
+          document.getElementById(id)?.classList.remove('active');
+        });
+        document.getElementById(btnId)?.classList.add('active');
+
+        // Apply quality setting
+        this.scene?.setQuality(qualityLevels[index]);
+      });
+    });
+
+    // Set initial active state based on detected quality
+    if (this.scene) {
+      const currentQuality = this.scene.getQuality();
+      qualityButtons.forEach(id => {
+        document.getElementById(id)?.classList.remove('active');
+      });
+      const index = qualityLevels.indexOf(currentQuality);
+      if (index >= 0) {
+        document.getElementById(qualityButtons[index])?.classList.add('active');
+      }
+    }
   }
 
   private setActiveButton(activeId: string): void {
@@ -432,6 +493,7 @@ class App {
     if (this._animationId) {
       cancelAnimationFrame(this._animationId);
     }
+    this.virtualJoystick?.dispose();
     this.agentRenderer?.dispose();
     this.crowdManager?.dispose();
     this.player?.dispose();

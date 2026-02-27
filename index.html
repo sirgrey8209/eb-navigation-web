@@ -19,6 +19,20 @@
 
     <!-- Main Content -->
     <main id="main">
+      <!-- Performance Panel (Top) -->
+      <div id="performance-panel" class="panel">
+        <span>FPS: <span id="fps">0</span></span>
+        <span>Agents: <span id="agent-count">0</span></span>
+        <span>Frame: <span id="frame-time">0</span>ms</span>
+        <span class="timing-detail">Crowd: <span id="crowd-time">0</span>ms</span>
+        <span class="timing-detail">Render: <span id="render-time">0</span>ms</span>
+        <span class="quality-toggle">
+          <button id="quality-low" class="quality-btn">Low</button>
+          <button id="quality-medium" class="quality-btn">Med</button>
+          <button id="quality-high" class="quality-btn active">High</button>
+        </span>
+      </div>
+
       <!-- 3D Viewport -->
       <div id="viewport"></div>
 
@@ -57,13 +71,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Performance Panel -->
-      <div id="performance-panel" class="panel">
-        <span>FPS: <span id="fps">0</span></span>
-        <span>Agents: <span id="agent-count">0</span></span>
-        <span>Frame: <span id="frame-time">0</span>ms</span>
       </div>
     </main>
   </div>

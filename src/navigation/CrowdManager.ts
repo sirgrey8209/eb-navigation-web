@@ -142,6 +142,32 @@ export class CrowdManager {
     });
   }
 
+  /**
+   * Remove agents that are within a certain distance of a target point
+   * @param target The target position to check against
+   * @param radius The distance threshold for removal
+   * @returns Number of agents removed
+   */
+  public removeAgentsNearTarget(target: THREE.Vector3, radius: number): number {
+    if (!this.crowd) return 0;
+
+    const toRemove: number[] = [];
+
+    this.agents.forEach(agent => {
+      const dx = agent.position.x - target.x;
+      const dz = agent.position.z - target.z;
+      const distanceSq = dx * dx + dz * dz;
+
+      if (distanceSq <= radius * radius) {
+        toRemove.push(agent.id);
+      }
+    });
+
+    toRemove.forEach(id => this.removeAgent(id));
+
+    return toRemove.length;
+  }
+
   public getAgents(): AgentData[] {
     return Array.from(this.agents.values());
   }

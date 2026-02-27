@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { JoystickInput } from '../ui/VirtualJoystick';
 
 export interface PlayerConfig {
   moveSpeed: number;
@@ -25,6 +26,7 @@ export class Player {
     right: false,
   };
   private groundBounds: { min: number; max: number } = { min: -50, max: 50 };
+  private joystickInput: JoystickInput | null = null;
 
   constructor(config: Partial<PlayerConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -114,18 +116,35 @@ export class Player {
     }
   };
 
+  /**
+   * Set joystick input for mobile controls
+   */
+  public setJoystickInput(input: JoystickInput | null): void {
+    this.joystickInput = input;
+  }
+
   public update(deltaTime: number): void {
     // Calculate movement direction
     this.velocity.set(0, 0, 0);
 
-    if (this.inputState.forward) this.velocity.z -= 1;
-    if (this.inputState.backward) this.velocity.z += 1;
-    if (this.inputState.left) this.velocity.x -= 1;
-    if (this.inputState.right) this.velocity.x += 1;
+    // Check joystick input first (mobile)
+    if (this.joystickInput && this.joystickInput.active) {
+      this.velocity.x = this.joystickInput.x;
+      this.velocity.z = this.joystickInput.y;
+    } else {
+      // Keyboard input (desktop)
+      if (this.inputState.forward) this.velocity.z -= 1;
+      if (this.inputState.backward) this.velocity.z += 1;
+      if (this.inputState.left) this.velocity.x -= 1;
+      if (this.inputState.right) this.velocity.x += 1;
+    }
 
     // Normalize and apply speed
     if (this.velocity.length() > 0) {
-      this.velocity.normalize();
+      // Only normalize for keyboard (joystick already provides magnitude)
+      if (!this.joystickInput || !this.joystickInput.active) {
+        this.velocity.normalize();
+      }
       this.velocity.multiplyScalar(this.config.moveSpeed * deltaTime);
 
       // Apply movement
