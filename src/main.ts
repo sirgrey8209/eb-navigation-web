@@ -1,11 +1,13 @@
 // EB Navigation Web - Main Entry Point
 import { Scene } from './core/Scene';
+import { CameraController } from './core/CameraController';
 import { Ground } from './objects/Ground';
 
 console.log('EB Navigation Web - Starting...');
 
 class App {
   private scene: Scene | null = null;
+  private cameraController: CameraController | null = null;
   private ground: Ground | null = null;
   private animationId: number = 0;
 
@@ -24,6 +26,18 @@ class App {
     // Initialize Three.js Scene
     this.scene = new Scene(viewport);
 
+    // Initialize Camera Controller
+    this.cameraController = new CameraController(
+      this.scene.camera,
+      viewport,
+      {
+        minZoom: 10,
+        maxZoom: 200,
+        panSpeed: 1,
+        zoomSpeed: 0.1,
+      }
+    );
+
     // Add ground
     this.ground = new Ground(100, 10);
     this.ground.addToScene(this.scene.scene);
@@ -37,6 +51,10 @@ class App {
 
   private animate = (): void => {
     this.animationId = requestAnimationFrame(this.animate);
+
+    if (this.cameraController) {
+      this.cameraController.update();
+    }
 
     if (this.scene) {
       this.scene.render();
