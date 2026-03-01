@@ -8,6 +8,11 @@ export class NavMeshExtractor {
    * recast-navigation NavMesh에서 커스텀 데이터 추출
    */
   public static extract(navMesh: NavMesh): CustomNavMeshData {
+    // Input validation
+    if (!navMesh) {
+      return { polygons: [], polyCount: 0 };
+    }
+
     const polygons: CustomNavMeshPolygon[] = [];
 
     // NavMesh의 폴리곤 데이터 가져오기
@@ -39,6 +44,9 @@ export class NavMeshExtractor {
           vertices.push(new THREE.Vector3(x, y, z));
         }
 
+        // Division by zero guard
+        if (vertices.length === 0) continue;
+
         // 폴리곤 중심 계산
         const center = new THREE.Vector3();
         for (const v of vertices) {
@@ -46,18 +54,8 @@ export class NavMeshExtractor {
         }
         center.divideScalar(vertices.length);
 
-        // 인접 폴리곤 추출
+        // 이웃은 rebuildNeighbors에서 재계산됨
         const neighbors: number[] = [];
-        for (let n = 0; n < vertCount; n++) {
-          const neiRef = poly.neis(n);
-          if (neiRef !== 0) {
-            // 내부 타일 이웃
-            if (neiRef <= tilePolyCount) {
-              neighbors.push(neiRef - 1 + polyId - polyIdx);
-            }
-            // 외부 타일 연결은 별도 처리 필요 (현재는 단순화)
-          }
-        }
 
         polygons.push({
           id: polyId,
@@ -119,6 +117,7 @@ export class NavMeshExtractor {
 
   /**
    * 주어진 위치가 속한 폴리곤 ID 찾기
+   * TODO: Optimize with grid-based spatial index for large NavMeshes
    */
   public static findPolygonAtPoint(
     navMeshData: CustomNavMeshData,
