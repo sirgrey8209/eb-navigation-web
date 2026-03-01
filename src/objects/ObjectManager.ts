@@ -17,7 +17,6 @@ export class ObjectManager {
   private objectIdCounter: number = 0;
 
   // Drag placement state
-  private isDragging: boolean = false;
   private dragStartPos: THREE.Vector2 = new THREE.Vector2();
   private onCancelPlacementCallback: (() => void) | null = null;
 
@@ -149,7 +148,6 @@ export class ObjectManager {
     }
 
     this.dragStartPos.set(event.clientX, event.clientY);
-    this.isDragging = false;
   };
 
   private onMouseUp = (event: MouseEvent): void => {
@@ -175,8 +173,6 @@ export class ObjectManager {
       // Not in placement mode: select only on click (not drag)
       this.trySelect();
     }
-
-    this.isDragging = false;
   };
 
   private onContextMenu = (event: MouseEvent): void => {
@@ -190,15 +186,6 @@ export class ObjectManager {
   };
 
   private onMouseMove = (event: MouseEvent): void => {
-    // Track dragging
-    if (event.buttons === 1) {
-      const dx = event.clientX - this.dragStartPos.x;
-      const dy = event.clientY - this.dragStartPos.y;
-      if (Math.sqrt(dx * dx + dy * dy) > 5) {
-        this.isDragging = true;
-      }
-    }
-
     this.updateMouse(event);
 
     if (this.placementMode && this.previewMesh) {
