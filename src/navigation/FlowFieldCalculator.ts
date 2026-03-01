@@ -12,6 +12,7 @@ export class FlowFieldCalculator {
   private navMeshData: CustomNavMeshData | null = null;
   private flowFields: Map<number, FlowFieldData> = new Map();
   private config: FlowFieldConfig;
+  private scratchDir: THREE.Vector3 = new THREE.Vector3();
 
   constructor(config: Partial<FlowFieldConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -61,16 +62,17 @@ export class FlowFieldCalculator {
     // 초기화: 모든 거리를 무한대로
     distances.fill(Infinity);
 
-    // BFS
+    // BFS with index-based dequeue for efficiency
     const queue: number[] = [targetPolyId];
+    let head = 0;
     distances[targetPolyId] = 0;
     // 타겟 폴리곤은 방향 (0, 0, 0)
     directions[targetPolyId * 3] = 0;
     directions[targetPolyId * 3 + 1] = 0;
     directions[targetPolyId * 3 + 2] = 0;
 
-    while (queue.length > 0) {
-      const currentId = queue.shift()!;
+    while (head < queue.length) {
+      const currentId = queue[head++];
       const currentPoly = this.navMeshData.polygons[currentId];
       const currentDist = distances[currentId];
 
@@ -86,11 +88,14 @@ export class FlowFieldCalculator {
         // 거리 설정
         distances[neighborId] = currentDist + 1;
 
-        // 방향: 이웃 → 현재 (타겟 방향)
-        const dir = currentPoly.center.clone().sub(neighborPoly.center).normalize();
-        directions[neighborId * 3] = dir.x;
-        directions[neighborId * 3 + 1] = dir.y;
-        directions[neighborId * 3 + 2] = dir.z;
+        // 방향: 이웃 → 현재 (타겟 방향) - reuse scratch vector
+        this.scratchDir
+          .copy(currentPoly.center)
+          .sub(neighborPoly.center)
+          .normalize();
+        directions[neighborId * 3] = this.scratchDir.x;
+        directions[neighborId * 3 + 1] = this.scratchDir.y;
+        directions[neighborId * 3 + 2] = this.scratchDir.z;
 
         queue.push(neighborId);
       }
@@ -117,6 +122,7 @@ export class FlowFieldCalculator {
     if (!flowField || polyId < 0) return null;
 
     const idx = polyId * 3;
+    if (idx >= flowField.directions.length) return null;
     return new THREE.Vector3(
       flowField.directions[idx],
       flowField.directions[idx + 1],
