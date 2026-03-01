@@ -377,6 +377,26 @@ class App {
     // Sliders
     this.setupSliders();
 
+    // Flow Field 토글
+    document.getElementById('toggle-flowfield')?.addEventListener('change', (e) => {
+      this.useFlowField = (e.target as HTMLInputElement).checked;
+      console.log(`Flow Field mode: ${this.useFlowField}`);
+    });
+
+    // Flow Field 시각화 토글
+    document.getElementById('toggle-flowfield-viz')?.addEventListener('change', (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      if (this.flowFieldVisualizer) {
+        this.flowFieldVisualizer.setVisible(checked);
+        if (checked && this.flowFieldAgentSystem) {
+          this.flowFieldVisualizer.update(
+            this.flowFieldAgentSystem.getFlowFieldCalculator(),
+            0
+          );
+        }
+      }
+    });
+
     // Quality buttons
     this.setupQualityButtons();
   }
