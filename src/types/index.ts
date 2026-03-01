@@ -16,3 +16,5 @@ export interface ObjectManagerEvents {
   onPlace: (object: PlacedObject) => void;
   onDelete: (id: string) => void;
 }
+
+export * from './flowfield';
