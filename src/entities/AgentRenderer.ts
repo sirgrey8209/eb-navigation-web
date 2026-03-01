@@ -22,6 +22,7 @@ export class AgentRenderer {
   private dummyPosition: THREE.Vector3 = new THREE.Vector3();
   private dummyQuaternion: THREE.Quaternion = new THREE.Quaternion();
   private dummyScale: THREE.Vector3 = new THREE.Vector3(1, 1, 1);
+  private readonly yAxis: THREE.Vector3 = new THREE.Vector3(0, 1, 0);
   private scene: THREE.Scene | null = null;
   private activeCount: number = 0;
 
@@ -81,7 +82,7 @@ export class AgentRenderer {
       // Calculate rotation from velocity (face movement direction)
       if (agent.velocity.lengthSq() > 0.01) {
         const angle = Math.atan2(agent.velocity.x, agent.velocity.z);
-        this.dummyQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        this.dummyQuaternion.setFromAxisAngle(this.yAxis, angle);
       }
 
       // Compose matrix
@@ -140,7 +141,7 @@ export class AgentRenderer {
       const vz = velocities[idx + 2];
       if (vx * vx + vz * vz > 0.01) {
         const angle = Math.atan2(vx, vz);
-        this.dummyQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+        this.dummyQuaternion.setFromAxisAngle(this.yAxis, angle);
       }
 
       // 매트릭스 구성
