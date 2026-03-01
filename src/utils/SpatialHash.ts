@@ -2,10 +2,10 @@
 
 export class SpatialHash {
   private readonly _cellSize: number;
-  private invCellSize: number;
+  private readonly invCellSize: number;
   private grid: Map<number, number[]>;
-  private worldSize: number;
-  private gridSize: number;
+  private readonly worldSize: number;
+  private readonly gridSize: number;
 
   constructor(cellSize: number = 2.0, worldSize: number = 100) {
     this._cellSize = cellSize;
@@ -23,15 +23,6 @@ export class SpatialHash {
   }
 
   /**
-   * 월드 좌표를 셀 인덱스로 변환
-   */
-  private hash(x: number, z: number): number {
-    const cx = Math.floor((x + this.worldSize / 2) * this.invCellSize);
-    const cz = Math.floor((z + this.worldSize / 2) * this.invCellSize);
-    return cz * this.gridSize + cx;
-  }
-
-  /**
    * 그리드 초기화
    */
   public clear(): void {
@@ -46,11 +37,27 @@ export class SpatialHash {
   public build(positions: Float32Array, count: number): void {
     this.clear();
 
+    const halfWorld = this.worldSize / 2;
+
     for (let i = 0; i < count; i++) {
       const idx = i * 3;
       const x = positions[idx];
       const z = positions[idx + 2];
-      const hash = this.hash(x, z);
+
+      // 월드 경계 체크 - 범위 밖 에이전트는 스킵
+      if (x < -halfWorld || x >= halfWorld || z < -halfWorld || z >= halfWorld) {
+        continue;
+      }
+
+      const cx = Math.floor((x + halfWorld) * this.invCellSize);
+      const cz = Math.floor((z + halfWorld) * this.invCellSize);
+
+      // 그리드 경계 체크 (부동소수점 오차 방지)
+      if (cx < 0 || cx >= this.gridSize || cz < 0 || cz >= this.gridSize) {
+        continue;
+      }
+
+      const hash = cz * this.gridSize + cx;
 
       let cell = this.grid.get(hash);
       if (!cell) {
