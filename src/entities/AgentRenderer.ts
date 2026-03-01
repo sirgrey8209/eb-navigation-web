@@ -9,7 +9,7 @@ export interface AgentRendererConfig {
 }
 
 const DEFAULT_CONFIG: AgentRendererConfig = {
-  maxAgents: 500,
+  maxAgents: 1000,
   agentRadius: 0.5,
   agentHeight: 2.0,
   agentColor: 0xff4444,
@@ -102,6 +102,48 @@ export class AgentRenderer {
     for (let i = 0; i < count; i++) {
       const idx = i * 3;
       this.dummyPosition.set(positions[idx], positions[idx + 1], positions[idx + 2]);
+      this.dummyMatrix.compose(this.dummyPosition, this.dummyQuaternion, this.dummyScale);
+      this.instancedMesh.setMatrixAt(i, this.dummyMatrix);
+    }
+
+    this.instancedMesh.instanceMatrix.needsUpdate = true;
+  }
+
+  /**
+   * TypedArray로부터 에이전트 렌더링 업데이트
+   * @param positions Float32Array [x, y, z, ...]
+   * @param velocities Float32Array [vx, vy, vz, ...] (방향 계산용)
+   * @param count 활성 에이전트 수
+   */
+  public updateFromTypedArrays(
+    positions: Float32Array,
+    velocities: Float32Array,
+    count: number
+  ): void {
+    if (!this.instancedMesh) return;
+
+    this.activeCount = count;
+    this.instancedMesh.count = count;
+
+    for (let i = 0; i < count; i++) {
+      const idx = i * 3;
+
+      // 위치 설정
+      this.dummyPosition.set(
+        positions[idx],
+        positions[idx + 1],
+        positions[idx + 2]
+      );
+
+      // 속도로부터 회전 계산
+      const vx = velocities[idx];
+      const vz = velocities[idx + 2];
+      if (vx * vx + vz * vz > 0.01) {
+        const angle = Math.atan2(vx, vz);
+        this.dummyQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+      }
+
+      // 매트릭스 구성
       this.dummyMatrix.compose(this.dummyPosition, this.dummyQuaternion, this.dummyScale);
       this.instancedMesh.setMatrixAt(i, this.dummyMatrix);
     }
