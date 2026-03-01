@@ -1,4 +1,5 @@
 // EB Navigation Web - Main Entry Point
+import * as THREE from 'three';
 import { Scene } from './core/Scene';
 import { CameraController } from './core/CameraController';
 import { Ground } from './objects/Ground';
@@ -11,6 +12,10 @@ import { AgentRenderer } from './entities/AgentRenderer';
 import { VirtualJoystick } from './ui/VirtualJoystick';
 import { Profiler } from './utils/Profiler';
 import { PlacedObject } from './types';
+import { FlowFieldAgentSystem } from './entities/FlowFieldAgentSystem';
+import { NavMeshExtractor } from './navigation/NavMeshExtractor';
+import { FlowFieldVisualizer } from './navigation/FlowFieldVisualizer';
+import { Target } from './types/flowfield';
 
 console.log('EB Navigation Web - Starting...');
 
@@ -26,6 +31,9 @@ class App {
   private agentRenderer: AgentRenderer | null = null;
   private virtualJoystick: VirtualJoystick | null = null;
   private profiler: Profiler | null = null;
+  private flowFieldAgentSystem: FlowFieldAgentSystem | null = null;
+  private flowFieldVisualizer: FlowFieldVisualizer | null = null;
+  private useFlowField: boolean = true; // Flow Field 사용 여부
   private _animationId: number = 0;
 
   private groundSize: number = 100;
@@ -34,6 +42,17 @@ class App {
   private spawnTimer: number = 0;
   private spawnRate: number = 10; // agents per second
   private spawnDistance: number = 30;
+
+  // Cached target object to avoid per-frame allocation
+  private readonly cachedTarget: Target = {
+    id: 0,
+    position: new THREE.Vector3(),
+    radius: 0.5,
+    color: 0x00aaff,
+  };
+
+  // Scratch vector for spawn position to avoid per-spawn allocation
+  private readonly scratchSpawnPos: THREE.Vector3 = new THREE.Vector3();
 
   constructor() {
     console.log('App initialized');
@@ -105,12 +124,23 @@ class App {
 
     // Initialize Agent Renderer
     this.agentRenderer = new AgentRenderer({
-      maxAgents: 500,
+      maxAgents: 1000,
       agentRadius: 0.5,
       agentHeight: 2.0,
       agentColor: 0xff4444,
     });
     this.agentRenderer.initialize(this.scene.scene);
+
+    // Initialize Flow Field Agent System
+    this.flowFieldAgentSystem = new FlowFieldAgentSystem({
+      maxAgents: 1000,
+      maxSpeed: 5.0,
+      radius: 0.5,
+      separationWeight: 2.0,
+    });
+
+    // Initialize Flow Field Visualizer
+    this.flowFieldVisualizer = new FlowFieldVisualizer(this.scene.scene);
 
     // Initialize Virtual Joystick for mobile
     this.virtualJoystick = new VirtualJoystick(document.body, {
@@ -181,31 +211,65 @@ class App {
   };
 
   private updateSimulation(deltaTime: number): void {
-    if (!this.crowdManager || !this.player || !this.agentRenderer) return;
+    if (!this.player || !this.agentRenderer) return;
 
-    // Spawn new agents based on spawn rate
-    this.spawnTimer += deltaTime;
-    const spawnInterval = 1 / this.spawnRate;
-
-    while (this.spawnTimer >= spawnInterval) {
-      this.spawnTimer -= spawnInterval;
-      this.spawnAgent();
-    }
-
-    // Update agent targets to follow player
     const playerPos = this.player.getGroundPosition();
-    this.crowdManager.setAllAgentsTarget(playerPos);
 
-    // Update crowd simulation
-    this.crowdManager.update(deltaTime);
+    if (this.useFlowField && this.flowFieldAgentSystem) {
+      // Flow Field 기반 시뮬레이션 (cachedTarget 사용하여 할당 방지)
+      this.cachedTarget.position.copy(playerPos);
+      this.cachedTarget.radius = this.player.getRadius();
+      this.flowFieldAgentSystem.setTarget(this.cachedTarget);
 
-    // Remove agents that reached the player
-    const catchRadius = this.player.getRadius() + 1.0; // Player radius + agent radius + small buffer
-    this.crowdManager.removeAgentsNearTarget(playerPos, catchRadius);
+      // 스폰
+      this.spawnTimer += deltaTime;
+      const spawnInterval = 1 / this.spawnRate;
+      while (this.spawnTimer >= spawnInterval) {
+        this.spawnTimer -= spawnInterval;
+        this.spawnAgentFlowField();
+      }
 
-    // Update agent rendering
-    const agents = this.crowdManager.getAgents();
-    this.agentRenderer.update(agents);
+      // 업데이트
+      this.flowFieldAgentSystem.update(deltaTime);
+
+      // 플레이어 근처 에이전트 제거
+      const catchRadius = this.player.getRadius() + 1.0;
+      this.flowFieldAgentSystem.removeAgentsNearTarget(0, catchRadius);
+
+      // 렌더링
+      const agentData = this.flowFieldAgentSystem.getAgentData();
+      this.agentRenderer.updateFromTypedArrays(
+        agentData.positions,
+        agentData.velocities,
+        agentData.count
+      );
+    } else {
+      // 기존 Detour Crowd 시뮬레이션
+      if (!this.crowdManager) return;
+
+      // Spawn new agents based on spawn rate
+      this.spawnTimer += deltaTime;
+      const spawnInterval = 1 / this.spawnRate;
+
+      while (this.spawnTimer >= spawnInterval) {
+        this.spawnTimer -= spawnInterval;
+        this.spawnAgent();
+      }
+
+      // Update agent targets to follow player
+      this.crowdManager.setAllAgentsTarget(playerPos);
+
+      // Update crowd simulation
+      this.crowdManager.update(deltaTime);
+
+      // Remove agents that reached the player
+      const catchRadius = this.player.getRadius() + 1.0;
+      this.crowdManager.removeAgentsNearTarget(playerPos, catchRadius);
+
+      // Update agent rendering
+      const agents = this.crowdManager.getAgents();
+      this.agentRenderer.update(agents);
+    }
   }
 
   private spawnAgent(): void {
@@ -226,24 +290,46 @@ class App {
 
     const playerPos = this.player.getGroundPosition();
 
-    // Spawn at random position around player at spawn distance
+    // Spawn at random position around player at spawn distance (using scratch vector)
     const angle = Math.random() * Math.PI * 2;
-    const spawnPos = playerPos.clone();
-    spawnPos.x += Math.cos(angle) * this.spawnDistance;
-    spawnPos.z += Math.sin(angle) * this.spawnDistance;
+    const x = playerPos.x + Math.cos(angle) * this.spawnDistance;
+    const z = playerPos.z + Math.sin(angle) * this.spawnDistance;
 
     // Clamp to ground bounds
     const halfGround = this.groundSize / 2 - 1;
-    spawnPos.x = Math.max(-halfGround, Math.min(halfGround, spawnPos.x));
-    spawnPos.z = Math.max(-halfGround, Math.min(halfGround, spawnPos.z));
+    this.scratchSpawnPos.set(
+      Math.max(-halfGround, Math.min(halfGround, x)),
+      0,
+      Math.max(-halfGround, Math.min(halfGround, z))
+    );
 
-    this.crowdManager.addAgent(spawnPos, playerPos);
+    this.crowdManager.addAgent(this.scratchSpawnPos, playerPos);
+  }
+
+  private spawnAgentFlowField(): void {
+    if (!this.flowFieldAgentSystem || !this.player) return;
+
+    const playerPos = this.player.getGroundPosition();
+    const angle = Math.random() * Math.PI * 2;
+    const x = playerPos.x + Math.cos(angle) * this.spawnDistance;
+    const z = playerPos.z + Math.sin(angle) * this.spawnDistance;
+
+    // 경계 제한
+    const halfGround = this.groundSize / 2 - 1;
+    const clampedX = Math.max(-halfGround, Math.min(halfGround, x));
+    const clampedZ = Math.max(-halfGround, Math.min(halfGround, z));
+
+    this.flowFieldAgentSystem.addAgent(clampedX, 0, clampedZ);
   }
 
   private updateAgentCountDisplay(): void {
     const agentCountEl = document.getElementById('agent-count');
-    if (agentCountEl && this.crowdManager) {
-      agentCountEl.textContent = this.crowdManager.getAgentCount().toString();
+    if (agentCountEl) {
+      if (this.useFlowField && this.flowFieldAgentSystem) {
+        agentCountEl.textContent = this.flowFieldAgentSystem.getAgentCount().toString();
+      } else if (this.crowdManager) {
+        agentCountEl.textContent = this.crowdManager.getAgentCount().toString();
+      }
     }
   }
 
@@ -364,6 +450,13 @@ class App {
           this.navMeshVisualizer!.update(navMesh);
           console.log('NavMesh built and visualized');
 
+          // Flow Field 시스템에 NavMesh 데이터 전달
+          if (this.flowFieldAgentSystem) {
+            const navMeshData = NavMeshExtractor.extract(navMesh);
+            this.flowFieldAgentSystem.setNavMeshData(navMeshData);
+            console.log(`NavMesh extracted: ${navMeshData.polyCount} polygons`);
+          }
+
           // Re-initialize crowd manager with new NavMesh
           if (this.crowdManager) {
             this.crowdManager.dispose();
@@ -421,6 +514,7 @@ class App {
 
     // Clear agents
     this.crowdManager?.clearAllAgents();
+    this.flowFieldAgentSystem?.clearAgents();
 
     // Clear agent renderer
     if (this.agentRenderer) {
@@ -435,6 +529,7 @@ class App {
 
     // Clear NavMesh visualization
     this.navMeshVisualizer?.clear();
+    this.flowFieldVisualizer?.clear();
 
     // Reset agent count display
     const agentCount = document.getElementById('agent-count');
@@ -495,6 +590,8 @@ class App {
     }
     this.virtualJoystick?.dispose();
     this.agentRenderer?.dispose();
+    this.flowFieldVisualizer?.dispose();
+    this.flowFieldAgentSystem?.dispose();
     this.crowdManager?.dispose();
     this.player?.dispose();
     this.navMeshVisualizer?.dispose();
