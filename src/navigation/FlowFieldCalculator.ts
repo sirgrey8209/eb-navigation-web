@@ -117,17 +117,22 @@ export class FlowFieldCalculator {
   /**
    * 특정 폴리곤에서의 방향 벡터 조회
    */
+  /**
+   * 특정 폴리곤에서의 방향 벡터 조회 (scratch vector 사용)
+   * 주의: 반환된 벡터는 재사용되므로 필요시 clone() 호출
+   */
   public getDirection(targetId: number, polyId: number): THREE.Vector3 | null {
     const flowField = this.flowFields.get(targetId);
     if (!flowField || polyId < 0) return null;
 
     const idx = polyId * 3;
     if (idx >= flowField.directions.length) return null;
-    return new THREE.Vector3(
+    this.scratchDir.set(
       flowField.directions[idx],
       flowField.directions[idx + 1],
       flowField.directions[idx + 2]
     );
+    return this.scratchDir;
   }
 
   /**
